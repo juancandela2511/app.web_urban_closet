@@ -7,24 +7,35 @@ import { useEffect, useState } from "react";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [theme, setTheme] = useState("light");
+  
+  // 1. Inicializamos el estado leyendo localStorage de forma segura
+  const [theme, setTheme] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+  
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.totalItems());
 
-  useEffect(() => {
-    setMounted(true);
+  // 2. El useEffect ahora solo se encarga del montaje y del evento Scroll
+   useEffect(() => {
+   setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    
+    // Aplicamos el tema guardado al cargar la página
+    document.documentElement.setAttribute("data-theme", theme);
+    
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    
-    const savedTheme = localStorage.getItem("theme") || "light";
-    setTheme(savedTheme);
-    document.documentElement.setAttribute("data-theme", savedTheme);
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [theme]);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -32,6 +43,11 @@ export default function Header() {
     localStorage.setItem("theme", newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
   };
+
+  // 3. Evitamos discrepancias de renderizado entre el servidor y el cliente
+  if (!mounted) {
+    return null; 
+  }
 
   return (
     <header className={`header ${isScrolled ? "scrolled glass" : ""}`}>
@@ -59,7 +75,7 @@ export default function Header() {
           </div>
           
           <button className="action-btn theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
-            {mounted && (theme === "light" ? <Moon size={22} /> : <Sun size={22} />)}
+            {theme === "light" ? <Moon size={22} /> : <Sun size={22} />}
           </button>
           
           <button className="action-btn" aria-label="Account">
@@ -67,7 +83,7 @@ export default function Header() {
           </button>
           <Link href="/cart" className="cart-btn" aria-label="Cart">
             <ShoppingBag size={22} />
-            {mounted && totalItems > 0 && <span className="cart-count">{totalItems}</span>}
+            {totalItems > 0 && <span className="cart-count">{totalItems}</span>}
           </Link>
         </div>
       </div>
