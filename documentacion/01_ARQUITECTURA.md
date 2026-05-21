@@ -1,44 +1,87 @@
-# Arquitectura del Proyecto (Next.js 15 App Router)
+#"use client";
 
-El prototipo utiliza los estándares de Next.js **App Router**, priorizando Server Components e interactividad granular a través de Client Components donde sea estrictamente necesario.
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-## Estructura de Directorios
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-```text
-/ (Raíz del proyecto)
- ├── /app                   # Directorio base del enrutamiento
- │   ├── layout.tsx         # Contiene <html> y Navbar global/Footer/Toast container
- │   ├── globals.css        # Core del Sistema de Diseño y tokens CSS
- │   ├── page.tsx           # Landing page (Ruta: /)
- │   ├── /cart              # Carpeta de carrito
- │   │   └── page.tsx       # Vista detallada de compra (Ruta: /cart)
- │   └── /products          # Carpeta de Catálogo
- │       ├── page.tsx       # Grilla de productos (Ruta: /products)
- │       └── /[slug]        # Rutas dinámicas
- │           └── page.tsx   # Detalle aislado de un producto (Ruta: /products/...)
- ├── /components            # UI reutilizable
- │   ├── Header.tsx         # Navegación principal (Client Component con hidratación selectiva)
- │   ├── Footer.tsx         # Footer general de la marca
- │   ├── ProductCard.tsx    # Card visual (incluye iteración rápida de añadir/carrito)
- │   ├── PageTransition.tsx # Contenedor Framer Motion 
- │   └── ToastContainer.tsx # Capa visual que pinta las alertas de `toast-store`
- ├── /lib                   # Lógica de negocio, estado y servicios externos
- │   ├── data.ts            # Fuente centralizada de objetos (Mocks de Ropa)
- │   ├── store.ts           # Motor de Zustand (Carrito persistente)
- │   ├── toast-store.ts     # Manejador del sistema de notificaciones de la UI
- │   └── supabase.ts        # Archivo inicial de configuración para BaaS (Supabase)
- ├── /public                # Recursos estáticos
- │   └── /products          # Imágenes web de los componentes (shirts, dresses...)
- └── package.json           # Dependencias y scripts
-```
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-## Patrones de Desarrollo Importantes
+    try {
+      // Petición real de autenticación a Supabase
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
 
-**1. Interacción en el Cliente ("use client")**
-Puesto que se necesita CSS modular condicionado a estados (`useState`, `useEffect`), el proyecto emplea directivas de cliente en la parte superior de las rutas principales e interactivos (Páginas, Card de Producto, Carrito, Header). 
+      if (authError) throw authError;
 
-**2. Prevención de Mismatches de Hidratación**
-El proyecto contiene directrices de `suppressHydrationWarning` en la etiqueta `<html>` de `layout.tsx` como prevención de inyectores HTML de terceros, y usa la condicional `mounted` en el `Header` para leer del `localStorage`.
+      alert("¡Inicio de sesión exitoso!");
+      
+      // Una vez ingresa bien, lo mandamos a la página principal
+      router.push("/");
+      router.refresh();
+    } catch (err: any) {
+      // Si los datos están mal o no existe el usuario, pinta el error en pantalla
+      setError(err.message || "Credenciales incorrectas. Inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-**3. "Central Source of Truth" de la Información**
-En lugar de repetir diccionarios o `JSONS` en cada página web, `lib/data.ts` retiene la fuente singular de datos mock, facilitando su futura transformación hacia queries/fetch llamadas a un backend (ej: Supabase o API de Stripe).
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", backgroundColor: "#f9f9f9" }}>
+      <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "15px", padding: "30px", backgroundColor: "#fff", border: "1px solid #e0e0e0", borderRadius: "8px", width: "100%", maxWidth: "400px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+        <h2 style={{ textAlign: "center", color: "#333", marginBottom: "10px", fontSize: "22px", fontWeight: "bold" }}>Urban Closet</h2>
+        <p style={{ textAlign: "center", color: "#666", fontSize: "14px", marginTop: "-10px" }}>Inicia sesión para continuar</p>
+        
+        {error && (
+          <p style={{ color: "red", backgroundColor: "#ffe6e6", padding: "8px", borderRadius: "4px", fontSize: "13px", textAlign: "center" }}>
+            {error}
+          </p>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+          <label style={{ fontSize: "14px", color: "#555" }}>Correo Electrónico</label>
+          <input 
+            type="email" 
+            placeholder="ejemplo@correo.com" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+            style={{ padding: "10px", color: "#000", border: "1px solid #ccc", borderRadius: "4px", fontSize: "14px" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+          <label style={{ fontSize: "14px", color: "#555" }}>Contraseña</label>
+          <input 
+            type="password" 
+            placeholder="••••••••" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+            style={{ padding: "10px", color: "#000", border: "1px solid #ccc", borderRadius: "4px", fontSize: "14px" }}
+          />
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ padding: "12px", backgroundColor: "#000", color: "#fff", border: "none", borderRadius: "4px", fontWeight: "bold", cursor: loading ? "not-allowed" : "pointer", marginTop: "10px", transition: "background 0.2s", opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? "Cargando..." : "Ingresar"}
+        </button>
+      </form>
+    </div>
+  );
+}

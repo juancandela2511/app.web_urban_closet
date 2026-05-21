@@ -78,9 +78,9 @@ export default function Header() {
             {theme === "light" ? <Moon size={22} /> : <Sun size={22} />}
           </button>
           
-          <button className="action-btn" aria-label="Account">
-            <User size={22} />
-          </button>
+          <Link href="/admin" className="action-btn" aria-label="Account" style={{ display: "flex", alignItems: "center" }}>
+82:             <User size={22} />
+83:           </Link>
           <Link href="/cart" className="cart-btn" aria-label="Cart">
             <ShoppingBag size={22} />
             {totalItems > 0 && <span className="cart-count">{totalItems}</span>}
